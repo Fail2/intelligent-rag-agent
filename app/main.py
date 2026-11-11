@@ -3,12 +3,9 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-STATIC_DIR = BASE_DIR / "static"
 CHECKPOINT_DB_PATH = BASE_DIR / "data" / "checkpoints.sqlite"
 
 
@@ -36,28 +33,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-
-
-@app.get("/")
-async def serve_frontend():
-    """Serve the chat interface.
-
-    Function: serve_frontend
-    Args: None
-    Returns:
-        FileResponse: Frontend HTML page.
-    """
-    return FileResponse(STATIC_DIR / "index.html")
-
 
 @app.get("/health")
-async def health_check():
+async def health_check() -> dict[str, str]:
     """Check application health.
 
     Function: health_check
     Args: None
     Returns:
-        dict: Application health status.
+        dict[str, str]: Application health status.
     """
     return {"status": "healthy"}
