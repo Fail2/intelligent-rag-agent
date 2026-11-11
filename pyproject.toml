@@ -24,3 +24,20 @@ dev = [
     "pytest-asyncio>=1.4.1.post1",
     "ruff>=0.17.4",
 ]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # Pyflakes
+    "I",   # Import sorting
+    "UP",  # Python upgrade suggestions
+    "B",   # Bugbear
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
