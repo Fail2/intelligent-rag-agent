@@ -8,6 +8,10 @@ class Settings(BaseSettings):
     database_url: str = "sqlite+aiosqlite:///./data/app.db"
     chroma_persist_directory: str = "./data/chroma"
 
+    embedding_model: str = "BAAI/bge-m3"
+    embedding_batch_size: int = 2
+    embedding_device: str = "cpu"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
