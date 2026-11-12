@@ -4,6 +4,7 @@ from pydantic import SecretStr
 class Settings(BaseSettings):
     google_api_key: SecretStr | None = None
     groq_api_key: SecretStr | None = None
+    brevo_api_key: SecretStr | None = None
 
     llm_model: str = "openai/gpt-oss-120b"
     embedding_model: str = "gemini-embedding-2"
