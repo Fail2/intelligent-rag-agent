@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from app.rag.ingestion import load_pdf, split_documents
-from app.rag.vector_store import add_documents, get_vector_store
+from app.rag.vector_store import get_vector_store, replace_documents
 
 
 def main() -> None:
@@ -18,7 +18,7 @@ def main() -> None:
     documents = load_pdf(file_path)
     chunks = split_documents(documents)
 
-    ids = add_documents(chunks)
+    ids = replace_documents(chunks)
 
     print("Total chunks:", len(chunks))
     print("Stored chunks:", len(ids))

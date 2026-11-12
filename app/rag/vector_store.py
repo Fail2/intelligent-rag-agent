@@ -1,9 +1,10 @@
+import hashlib
+
 from langchain_chroma import Chroma
+from langchain_core.documents import Document
 
 from app.core.config import settings
 from app.rag.embeddings import get_embeddings
-from langchain_core.documents import Document
-
 
 
 def get_vector_store() -> Chroma:
@@ -22,14 +23,62 @@ def get_vector_store() -> Chroma:
     )
 
 
-def add_documents(documents: list[Document]) -> list[str]:
-    """Add document chunks to ChromaDB.
+def replace_documents(documents: list[Document]) -> list[str]:
+    """Upsert document chunks and remove outdated records for their source.
 
-    Function: add_documents
+    Function: replace_documents
     Args:
-        documents (list[Document]): Document chunks to store.
+        documents (list[Document]): New document chunks.
     Returns:
-        list[str]: IDs of the stored documents.
+        list[str]: Stable IDs of the stored documents.
     """
+    if not documents:
+        raise ValueError("No documents provided.")
+
+    sources = {doc.metadata["source"] for doc in documents}
+
+    if len(sources) != 1:
+        raise ValueError("All documents must belong to the same source.")
+
+    source = sources.pop()
     vector_store = get_vector_store()
-    return vector_store.add_documents(documents)
+
+    existing_records = vector_store.get(
+        where={"source": source}
+    )
+    existing_ids = set(existing_records["ids"])
+
+    section_counters = {}
+    document_ids = []
+
+    for document in documents:
+        section_id = document.metadata["section_id"]
+        chunk_index = section_counters.get(section_id, 0)
+
+        section_counters[section_id] = chunk_index + 1
+
+        raw_id = f"{source}:{section_id}:{chunk_index}"
+        document_id = hashlib.sha256(raw_id.encode()).hexdigest()
+
+        document_ids.append(document_id)
+
+        # ChromaDB metadata should not contain None values.
+        document.metadata = {
+            key: value
+            for key, value in document.metadata.items()
+            if value is not None
+        }
+
+    # Upsert: insert new records or update existing records.
+    vector_store.add_documents(
+        documents=documents,
+        ids=document_ids,
+    )
+
+    # Remove old records that are no longer part of the new ingestion.
+    stale_ids = existing_ids - set(document_ids)
+
+    if stale_ids:
+        vector_store.delete(ids=list(stale_ids))
+
+    return document_ids
