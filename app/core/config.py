@@ -1,8 +1,11 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
+from pydantic import SecretStr
 
 class Settings(BaseSettings):
-    google_api_key: str | None = None
+    google_api_key: SecretStr | None = None
+    groq_api_key: SecretStr | None = None
+
+    llm_model: str = "openai/gpt-oss-120b"
     embedding_model: str = "gemini-embedding-2"
 
     database_url: str = "sqlite+aiosqlite:///./data/app.db"
