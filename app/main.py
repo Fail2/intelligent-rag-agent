@@ -5,6 +5,9 @@ from pathlib import Path
 from fastapi import FastAPI
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
+from app.agent.graph import create_graph
+
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 CHECKPOINT_DB_PATH = BASE_DIR / "data" / "checkpoints.sqlite"
 
@@ -23,6 +26,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         str(CHECKPOINT_DB_PATH)
     ) as checkpointer:
         app.state.checkpointer = checkpointer
+        app.state.graph = create_graph(checkpointer=checkpointer)
         yield
 
 

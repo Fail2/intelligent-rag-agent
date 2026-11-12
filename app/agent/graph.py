@@ -115,4 +115,10 @@ builder.add_edge("tools", "record_tool_round")
 builder.add_edge("record_tool_round", "agent")
 builder.add_edge("tool_limit", END)
 
-graph = builder.compile()
+def create_graph(checkpointer=None):
+    """Compile the agent graph with an optional checkpointer."""
+    return builder.compile(checkpointer=checkpointer)
+
+
+# Keep a non-persistent graph for existing standalone tests.
+graph = create_graph()
