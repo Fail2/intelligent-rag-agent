@@ -1,9 +1,16 @@
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
 from langgraph.graph import END, START, MessagesState, StateGraph
 from langgraph.prebuilt import ToolNode
 
 from app.agent.model import get_chat_model
 from app.agent.tools import tools
+
+
+MAX_TOOL_CALL_ROUNDS = 3
+
+
+class AgentState(MessagesState):
+    tool_call_rounds: int
 
 
 SYSTEM_PROMPT = """
@@ -23,7 +30,12 @@ When using retrieved documents:
 model_with_tools = get_chat_model().bind_tools(tools)
 
 
-def call_model(state: MessagesState):
+def initialize_request(state: AgentState):
+    """Reset the tool-call counter for each new user request."""
+    return {"tool_call_rounds": 0}
+
+
+def call_model(state: AgentState):
     messages = [
         SystemMessage(content=SYSTEM_PROMPT),
         *state["messages"],
@@ -34,31 +46,73 @@ def call_model(state: MessagesState):
     return {"messages": [response]}
 
 
-def should_continue(state: MessagesState):
+def should_continue(state: AgentState):
     last_message = state["messages"][-1]
 
-    if last_message.tool_calls:
-        return "tools"
+    if not last_message.tool_calls:
+        return END
 
-    return END
+    if state.get("tool_call_rounds", 0) >= MAX_TOOL_CALL_ROUNDS:
+        return "tool_limit"
+
+    return "tools"
 
 
-builder = StateGraph(MessagesState)
+def record_tool_round(state: AgentState):
+    """Count one completed ToolNode execution round."""
+    return {
+        "tool_call_rounds": state.get("tool_call_rounds", 0) + 1
+    }
 
+
+def handle_tool_limit(state: AgentState):
+    """Close pending tool calls without executing them."""
+    last_message = state["messages"][-1]
+
+    tool_messages = [
+        ToolMessage(
+            content="Tool-call limit reached. This request was not executed.",
+            tool_call_id=tool_call["id"],
+        )
+        for tool_call in last_message.tool_calls
+    ]
+
+    return {
+        "messages": [
+            *tool_messages,
+            AIMessage(
+                content=(
+                    "I've reached the maximum of 3 tool-calling rounds "
+                    "for this request. Please refine your request and try again."
+                )
+            ),
+        ]
+    }
+
+
+builder = StateGraph(AgentState)
+
+builder.add_node("initialize", initialize_request)
 builder.add_node("agent", call_model)
 builder.add_node("tools", ToolNode(tools))
+builder.add_node("record_tool_round", record_tool_round)
+builder.add_node("tool_limit", handle_tool_limit)
 
-builder.add_edge(START, "agent")
+builder.add_edge(START, "initialize")
+builder.add_edge("initialize", "agent")
 
 builder.add_conditional_edges(
     "agent",
     should_continue,
     {
         "tools": "tools",
+        "tool_limit": "tool_limit",
         END: END,
     },
 )
 
-builder.add_edge("tools", "agent")
+builder.add_edge("tools", "record_tool_round")
+builder.add_edge("record_tool_round", "agent")
+builder.add_edge("tool_limit", END)
 
 graph = builder.compile()

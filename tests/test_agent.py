@@ -6,7 +6,6 @@ from app.agent.graph import graph
 def test_agent(question: str):
     result = graph.invoke(
         {"messages": [HumanMessage(content=question)]},
-        config={"recursion_limit": 6},
     )
 
     print("\nQuestion:", question)
