@@ -6,6 +6,10 @@ class Settings(BaseSettings):
     groq_api_key: SecretStr | None = None
     brevo_api_key: SecretStr | None = None
 
+    brevo_sender_name: str = "Intelligent RAG Agent"
+    brevo_sender_email: str = "malaychakma7@gmail.com"
+    default_recipient_email: str = "malaychakma520@gmail.com"
+
     llm_model: str = "openai/gpt-oss-120b"
     embedding_model: str = "gemini-embedding-2"
 
