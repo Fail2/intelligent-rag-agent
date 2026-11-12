@@ -2,15 +2,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    groq_api_key: str | None = None
-    llm_model: str = ""
+    google_api_key: str | None = None
+    embedding_model: str = "gemini-embedding-2"
 
     database_url: str = "sqlite+aiosqlite:///./data/app.db"
     chroma_persist_directory: str = "./data/chroma"
-
-    embedding_model: str = "BAAI/bge-m3"
-    embedding_batch_size: int = 2
-    embedding_device: str = "cpu"
 
     model_config = SettingsConfigDict(
         env_file=".env",
