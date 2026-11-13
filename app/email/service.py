@@ -13,6 +13,7 @@ async def send_email(subject: str, body: str, recipient_email: str | None = None
     """Send a transactional email through Brevo."""
 
     to_email = recipient_email or settings.default_recipient_email
+    recipient_name = recipient_name or settings.default_recipient_name
 
     client = get_brevo_client()
 

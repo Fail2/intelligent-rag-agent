@@ -8,6 +8,7 @@ class Settings(BaseSettings):
 
     brevo_sender_name: str = "Intelligent RAG Agent"
     brevo_sender_email: str = "malaychakma7@gmail.com"
+    default_recipient_name: str = "Malay Chakma"
     default_recipient_email: str = "malaychakma520@gmail.com"
 
     llm_model: str = "openai/gpt-oss-120b"

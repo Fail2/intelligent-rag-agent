@@ -32,10 +32,18 @@ class SendEmailInput(BaseModel):
     recipient_email: StrictStr | None = Field(
         default=None,
         max_length=254,
+        description=("Optional recipient email address. "
+        "If omitted, the configured default recipient will be used. "
+        "Do not ask the user for an address when they request "
+        "the default recipient.")
     )
     recipient_name: StrictStr | None = Field(
         default=None,
         max_length=100,
+        description=(
+        "Optional recipient name. "
+        "If omitted, the configured default recipient name will be used."
+        ),
     )
     subject: StrictStr = Field(min_length=1, max_length=200)
     body: StrictStr = Field(min_length=1, max_length=10000)
@@ -105,6 +113,19 @@ async def send_email_with_approval(
 
     Use this tool only when the user explicitly requests an email to be sent.
     The email must receive explicit human approval before sending.
+
+    If the user requests the default recipient:
+    - Use the configured default recipient email(malaychakma54@gmail.com).
+    - Use the configured default recipient name(Malay Chakma).
+    - Address the recipient by their name in the email body.
+    
+    - By default, append the following signature at the end of the email body:
+      Best Regards,
+      Intelligent RAG Agent
+      W3 Engineers Ltd.
+
+    - If the user explicitly provides a different signature or asks to omit it,
+      follow the user's instructions instead.
     """
 
     recipient = recipient_email or settings.default_recipient_email
