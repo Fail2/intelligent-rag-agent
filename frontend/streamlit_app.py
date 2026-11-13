@@ -12,6 +12,39 @@ st.set_page_config(
     layout="centered",
 )
 
+# CSS: user messages on the right, assistant messages on the left
+st.markdown(
+    """
+    <style>
+    /* Hidden markers */
+    .user-marker, .assistant-marker { display: none; }
+
+    /* Assistant: left side */
+    div[data-testid="stChatMessage"]:has(.assistant-marker) {
+        width: fit-content;
+        max-width: 80%;
+        margin-right: auto;
+    }
+
+    /* User: anchored to the right, grows toward the left */
+    div[data-testid="stChatMessage"]:has(.user-marker) {
+        flex-direction: row-reverse;
+        width: fit-content;
+        max-width: 80%;
+        margin-left: auto;
+        background-color: rgba(128, 128, 128, 0.12);
+        border-radius: 16px;
+    }
+
+    /* Keep wrapped text left-aligned inside the user bubble */
+    div[data-testid="stChatMessage"]:has(.user-marker) p {
+        text-align: left;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 st.title("🤖 Intelligent RAG Agent")
 st.caption("Your AI-powered assistant")
 
@@ -21,31 +54,31 @@ if "thread_id" not in st.session_state:
 
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {
-            "role": "assistant",
-            "content": "Hello! How can I help you today?",
-        }
+        {"role": "assistant", "content": "Hello! How can I help you today?"}
     ]
 
 if "pending_approval" not in st.session_state:
     st.session_state.pending_approval = None
 
+
+def render_message(role: str, content: str):
+    with st.chat_message(role):
+        marker = "user-marker" if role == "user" else "assistant-marker"
+        st.markdown(f'<span class="{marker}"></span>', unsafe_allow_html=True)
+        st.write(content)
+
+
 # Display conversation history
 for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.write(message["content"])
+    render_message(message["role"], message["content"])
 
-# Handle user input
+# Handle user input (disabled while an approval is pending)
 if prompt := st.chat_input(
     "Type your message...",
     disabled=st.session_state.pending_approval is not None,
 ):
-    st.session_state.messages.append(
-        {"role": "user", "content": prompt}
-    )
-
-    with st.chat_message("user"):
-        st.write(prompt)
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    render_message("user", prompt)
 
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
@@ -63,22 +96,18 @@ if prompt := st.chat_input(
 
                 if data["status"] == "completed":
                     answer = data["message"]
-
                 elif data["status"] == "approval_required":
                     st.session_state.pending_approval = data["approval"]
                     answer = "I need your approval before sending this email."
-
                 else:
                     answer = "Unexpected response from the server."
 
             except httpx.HTTPError as error:
                 answer = f"API connection error: {error}"
 
-        st.write(answer)
-
-    st.session_state.messages.append(
-        {"role": "assistant", "content": answer}
-    )
+    st.session_state.messages.append({"role": "assistant", "content": answer})
+    # Rerun so the chat input is redrawn (disabled if approval is pending)
+    st.rerun()
 
 # Display HITL approval panel
 approval = st.session_state.pending_approval
@@ -114,12 +143,8 @@ if approval:
             data = response.json()
 
             st.session_state.messages.append(
-                {
-                    "role": "assistant",
-                    "content": data["message"],
-                }
+                {"role": "assistant", "content": data["message"]}
             )
-
             st.session_state.pending_approval = None
             st.rerun()
 
