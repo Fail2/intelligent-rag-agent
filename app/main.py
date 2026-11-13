@@ -6,6 +6,8 @@ from fastapi import FastAPI
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
 from app.agent.graph import create_graph
+from app.api.approvals import router as approvals_router
+from app.api.chat import router as chat_router
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -36,6 +38,9 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+app.include_router(chat_router)
+app.include_router(approvals_router)
 
 
 @app.get("/health")
