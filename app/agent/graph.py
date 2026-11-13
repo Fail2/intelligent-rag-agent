@@ -35,14 +35,9 @@ def initialize_request(state: AgentState):
     return {"tool_call_rounds": 0}
 
 
-def call_model(state: AgentState):
-    messages = [
-        SystemMessage(content=SYSTEM_PROMPT),
-        *state["messages"],
-    ]
-
-    response = model_with_tools.invoke(messages)
-
+async def call_model(state: AgentState):
+    messages = [SystemMessage(content=SYSTEM_PROMPT), *state["messages"]]
+    response = await model_with_tools.ainvoke(messages)
     return {"messages": [response]}
 
 

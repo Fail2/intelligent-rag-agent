@@ -1,9 +1,14 @@
+import hashlib
+import json
 import logging
 from pathlib import Path
 
 from langchain.tools import tool
+from langgraph.types import interrupt
 from pydantic import BaseModel, Field, StrictInt, StrictStr, field_validator
 
+from app.core.config import settings
+from app.email.service import send_email as deliver_email
 from app.rag.retrieval import search_documents
 
 logger = logging.getLogger(__name__)
@@ -20,6 +25,30 @@ class SearchDocumentsInput(BaseModel):
 
         if not value:
             raise ValueError("Query cannot be empty.")
+
+        return value
+
+class SendEmailInput(BaseModel):
+    recipient_email: StrictStr | None = Field(
+        default=None,
+        max_length=254,
+    )
+    recipient_name: StrictStr | None = Field(
+        default=None,
+        max_length=100,
+    )
+    subject: StrictStr = Field(min_length=1, max_length=200)
+    body: StrictStr = Field(min_length=1, max_length=10000)
+
+    @field_validator("recipient_email", "recipient_name", "subject", "body")
+    @classmethod
+    def strip_values(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+
+        value = value.strip()
+        if not value:
+            raise ValueError("Value cannot be empty.")
 
         return value
 
@@ -65,5 +94,63 @@ def search_knowledge_base(query: str, k: int = 3) -> str:
         logger.exception("Document search failed.")
         return "Document search is temporarily unavailable."
 
+@tool(args_schema=SendEmailInput)
+async def send_email_with_approval(
+    subject: str,
+    body: str,
+    recipient_email: str | None = None,
+    recipient_name: str | None = None,
+) -> str:
+    """Send an email through Brevo.
 
-tools = [search_knowledge_base]
+    Use this tool only when the user explicitly requests an email to be sent.
+    The email must receive explicit human approval before sending.
+    """
+
+    recipient = recipient_email or settings.default_recipient_email
+
+    approval_data = {
+        "recipient": recipient,
+        "recipient_name": recipient_name,
+        "subject": subject,
+        "body": body,
+    }
+
+    approval_id = hashlib.sha256(
+        json.dumps(
+            approval_data,
+            sort_keys=True,
+            ensure_ascii=False,
+        ).encode("utf-8")
+    ).hexdigest()
+
+    decision = interrupt({
+        "type": "email_approval",
+        **approval_data,
+        "approval_id": approval_id,
+    })
+
+    if not isinstance(decision, dict):
+        return "Email rejected. It was not sent."
+
+    if decision.get("approved") is not True:
+        return "Email rejected. It was not sent."
+
+    if decision.get("approval_id") != approval_id:
+        return "Approval verification failed. Email was not sent."
+
+    try:
+        message_id = await deliver_email(
+            subject=subject,
+            body=body,
+            recipient_email=recipient,
+            recipient_name=recipient_name,
+        )
+        return f"Email sent successfully. Message ID: {message_id}"
+
+    except Exception:
+        logger.exception("Email delivery failed.")
+        return "Email delivery failed. Please try again later."
+
+tools = [search_knowledge_base, send_email_with_approval]
+
