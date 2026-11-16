@@ -1,10 +1,15 @@
 import uuid
-
+import os
 import httpx
 import streamlit as st
 
-API_URL = "http://127.0.0.1:8000/api/chat"
-APPROVAL_URL = "http://127.0.0.1:8000/api/approval"
+API_BASE_URL = (
+    os.getenv("API_BASE_URL")
+    or st.secrets.get("API_BASE_URL", "http://127.0.0.1:8000")
+).rstrip("/")
+
+API_URL = f"{API_BASE_URL}/api/chat"
+APPROVAL_URL = f"{API_BASE_URL}/api/approval"
 
 st.set_page_config(
     page_title="Intelligent RAG Agent",
