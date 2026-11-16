@@ -118,14 +118,16 @@ EMBEDDING_MODEL=gemini-embedding-2
 
 # Brevo - Email Service
 BREVO_API_KEY=your_brevo_api_key
+BREVO_SENDER_EMAIL=your_verified_sender@example.com
 ```
 
-**Required API keys:**
+**Required configuration:**
 - `GROQ_API_KEY` — for LLM access.
 - `GOOGLE_API_KEY` — for generating text embeddings.
 - `BREVO_API_KEY` — for email integration.
+- `BREVO_SENDER_EMAIL` — the sender email address verified in your Brevo account.
 
-Replace the placeholder values with your actual credentials. Keep `.env` private and never commit it to Git.
+Replace the placeholder values with your actual credentials and verified sender address. Keep `.env` private and never commit it to Git.
 
 ### 4. Prepare the Knowledge Base
 
@@ -158,6 +160,19 @@ uv run streamlit run frontend/streamlit_app.py
 The Streamlit frontend will open at:
 
 http://localhost:8501
+
+## Deployment
+
+The application is deployed using Render for the FastAPI backend and Streamlit Community Cloud for the frontend.
+
+- **Frontend:** https://intelligent-rag-agent.streamlit.app/
+- **Backend API:** https://intelligent-rag-agent-api.onrender.com
+- **Backend health check:** https://intelligent-rag-agent-api.onrender.com/health
+
+The backend uses Render's free instance, which may spin down after a period of inactivity. The first request after it has been idle can take longer while the service starts again. The free hosting environment also uses an ephemeral filesystem, so runtime filesystem changes are not guaranteed to survive restarts or redeployments. The pre-ingested ChromaDB files committed to the repository are included in fresh deployments.
+
+Email delivery is subject to the sending limits and policies of the configured Brevo plan.
+
 ## Implementation Status
 
 ### Implemented
@@ -182,7 +197,7 @@ http://localhost:8501
 - Validate tool inputs before execution.
 - Enforce human approval for protected actions.
 - Treat retrieved document content as reference data, not system instructions.
-- Avoid committing secrets, local databases, and vector-store data.
+- Avoid committing secrets and private credentials.
 - The pre-ingested ChromaDB `data/` folder is included in the repository to make it easier for the supervisor to review the project's knowledge base and verify the implementation.
 
 ## Project Objective
