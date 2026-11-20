@@ -20,7 +20,7 @@ def search_documents(query: str, k: int = 5, section_title: str | None = None,) 
     vector_store = get_vector_store()
 
     filter = (
-        {"section_title": section_title}
+        {"section_title": section_title,"parent_section_title": section_title,}
         if section_title is not None
         else None
     )
